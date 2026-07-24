@@ -43,7 +43,7 @@ public class SaveGame : MonoBehaviour
     {
         string json = JsonUtility.ToJson(game);
           //Here you can add your code to send the username and password to a server
-        using (UnityWebRequest www = UnityWebRequest.Put("http://localhost:3010/api/update_game_session", json))
+        using (UnityWebRequest www = UnityWebRequest.Put("https://BACKEND-URL-PLACEHOLDER/api/update_game_session", json))
         {
             
             Debug.Log("Sending request");

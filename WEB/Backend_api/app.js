@@ -7,18 +7,27 @@ const { stat } = require("fs");
 
 const app = express();
 app.use(cors());
-const port = 3010;
+// Railway (y cualquier host) inyecta el puerto por PORT; en local cae a 3010.
+const port = process.env.PORT || 3010;
 
 // Middleware to parse JSON request bodies
 app.use(express.json());
 
+// Health check: verifica rápido que el servicio está vivo (Railway / navegador).
+app.get("/", (req, res) => {
+    res.json({ status: "ok", service: "zazzacrifice-backend" });
+});
+
 // Route for creating a new user
+// Credenciales por variables de entorno (Railway inyecta las MYSQL*).
+// Fallback a los valores locales para no romper el desarrollo en la máquina.
 async function connectDB() {
     const connection = await mysql.createConnection({
-        host: "localhost",
-        user: "root",
-        password: "Zazza123",
-        database: "zazzacrifice",
+        host: process.env.DB_HOST || process.env.MYSQLHOST || "localhost",
+        port: process.env.DB_PORT || process.env.MYSQLPORT || 3306,
+        user: process.env.DB_USER || process.env.MYSQLUSER || "root",
+        password: process.env.DB_PASSWORD ?? process.env.MYSQLPASSWORD ?? "Zazza123",
+        database: process.env.DB_NAME || "zazzacrifice",
     });
 
     return connection;

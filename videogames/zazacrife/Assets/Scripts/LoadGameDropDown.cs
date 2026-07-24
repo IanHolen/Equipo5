@@ -77,7 +77,7 @@ public class LoadGameDropDown : MonoBehaviour
     {
         int user_id = PlayerPrefs.GetInt("User_id");
         Debug.Log(user_id);
-        string url = "http://localhost:3010/api/get_game_session_id?user_id=" + user_id.ToString();
+        string url = "https://BACKEND-URL-PLACEHOLDER/api/get_game_session_id?user_id=" + user_id.ToString();
         StartCoroutine(SendRequest(url));
     }
 }
