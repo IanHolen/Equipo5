@@ -22,13 +22,18 @@ app.get("/", (req, res) => {
 // Credenciales por variables de entorno (Railway inyecta las MYSQL*).
 // Fallback a los valores locales para no romper el desarrollo en la máquina.
 async function connectDB() {
-    const connection = await mysql.createConnection({
+    const config = {
         host: process.env.DB_HOST || process.env.MYSQLHOST || "localhost",
         port: process.env.DB_PORT || process.env.MYSQLPORT || 3306,
         user: process.env.DB_USER || process.env.MYSQLUSER || "root",
         password: process.env.DB_PASSWORD ?? process.env.MYSQLPASSWORD ?? "Zazza123",
         database: process.env.DB_NAME || "zazzacrifice",
-    });
+    };
+    // Aiven y otros MySQL gestionados exigen SSL: pon DB_SSL=true en el backend.
+    if (process.env.DB_SSL === "true" || process.env.DB_SSL === "require") {
+        config.ssl = { rejectUnauthorized: false };
+    }
+    const connection = await mysql.createConnection(config);
 
     return connection;
 }
