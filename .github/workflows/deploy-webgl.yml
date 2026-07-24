@@ -1,0 +1,98 @@
+name: Build & Deploy WebGL
+
+# Compila el juego Unity a WebGL en la nube (game-ci) y lo publica en GitHub Pages.
+# Requisitos (una sola vez):
+#   Secrets del repo: UNITY_LICENSE, UNITY_EMAIL, UNITY_PASSWORD  (licencia Unity Personal gratis)
+#   Variable del repo: BACKEND_URL  (URL pública del backend en Railway, ej: https://xxxx.up.railway.app)
+# Ver la guía completa en docs/REVIVE.md
+
+on:
+  push:
+    branches: [main, revive-webgl]
+    paths:
+      - 'videogames/**'
+      - '.github/workflows/deploy-webgl.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+# Evita despliegues simultáneos pisándose entre sí.
+concurrency:
+  group: "pages"
+  cancel-in-progress: false
+
+jobs:
+  build:
+    name: Build WebGL
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          lfs: true
+
+      - name: Inyectar URL del backend
+        run: |
+          if [ -z "${{ vars.BACKEND_URL }}" ]; then
+            echo "::warning::La variable BACKEND_URL no está configurada. El juego compilará, pero login/guardado no funcionarán hasta configurarla en Settings > Secrets and variables > Actions > Variables."
+          else
+            echo "Inyectando backend: ${{ vars.BACKEND_URL }}"
+            find videogames/zazacrife/Assets/Scripts -name '*.cs' -print0 \
+              | xargs -0 sed -i "s#https://BACKEND-URL-PLACEHOLDER#${{ vars.BACKEND_URL }}#g"
+            echo "Ocurrencias restantes del placeholder (debería ser 0):"
+            grep -rc "BACKEND-URL-PLACEHOLDER" videogames/zazacrife/Assets/Scripts || true
+          fi
+
+      - name: Cache de Library (acelera builds futuros)
+        uses: actions/cache@v4
+        with:
+          path: videogames/zazacrife/Library
+          key: Library-webgl-${{ hashFiles('videogames/zazacrife/Assets/**', 'videogames/zazacrife/Packages/**', 'videogames/zazacrife/ProjectSettings/**') }}
+          restore-keys: |
+            Library-webgl-
+            Library-
+
+      - name: Build (game-ci)
+        uses: game-ci/unity-builder@v4
+        env:
+          UNITY_LICENSE: ${{ secrets.UNITY_LICENSE }}
+          UNITY_EMAIL: ${{ secrets.UNITY_EMAIL }}
+          UNITY_PASSWORD: ${{ secrets.UNITY_PASSWORD }}
+        with:
+          projectPath: videogames/zazacrife
+          unityVersion: 2021.3.19f1
+          targetPlatform: WebGL
+          buildName: game
+
+      - name: Localizar salida WebGL y arreglar permisos
+        run: |
+          sudo chown -R "$(id -u):$(id -g)" build
+          echo "Estructura del build:"
+          find build -maxdepth 3 -type d
+          dir="$(dirname "$(find build -name index.html | head -1)")"
+          if [ -z "$dir" ] || [ ! -f "$dir/index.html" ]; then
+            echo "::error::No se encontró index.html en el build."
+            exit 1
+          fi
+          echo "WEBGL_DIR=$dir" >> "$GITHUB_ENV"
+          echo "index.html encontrado en: $dir"
+
+      - name: Subir artefacto para Pages
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: ${{ env.WEBGL_DIR }}
+
+  deploy:
+    name: Deploy a GitHub Pages
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - name: Deploy
+        id: deployment
+        uses: actions/deploy-pages@v4

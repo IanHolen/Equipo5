@@ -19,7 +19,7 @@ public class SaveNewGame : MonoBehaviour
     {
         string json = JsonUtility.ToJson(newgame);
           //Here you can add your code to send the username and password to a server
-        using (UnityWebRequest www = UnityWebRequest.Put("http://localhost:3010/api/new_game_session", json))
+        using (UnityWebRequest www = UnityWebRequest.Put("https://BACKEND-URL-PLACEHOLDER/api/new_game_session", json))
         {
             
             Debug.Log("Sending request");
@@ -53,6 +53,6 @@ public class SaveNewGame : MonoBehaviour
         newgame.stats = PlayerPrefs.GetString("Shaggy");
         newgame.user_id = PlayerPrefs.GetInt("User_id");
         newgame.class_id = PlayerPrefs.GetInt("Class_id");
-        StartCoroutine(SendRequest(newgame, "http://localhost:3010/api/new_game_session", "new_game_session"));
+        StartCoroutine(SendRequest(newgame, "https://BACKEND-URL-PLACEHOLDER/api/new_game_session", "new_game_session"));
     }
 }

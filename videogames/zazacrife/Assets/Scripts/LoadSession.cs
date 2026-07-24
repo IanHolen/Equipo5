@@ -53,7 +53,7 @@ public class LoadSession : MonoBehaviour
     public void LoadGameData()
     {
 
-        StartCoroutine(SendRequest("http://localhost:3010/api/get_game_session?user_id=" + PlayerPrefs.GetInt("User_id").ToString()));
+        StartCoroutine(SendRequest("https://BACKEND-URL-PLACEHOLDER/api/get_game_session?user_id=" + PlayerPrefs.GetInt("User_id").ToString()));
     }
 
     public void LoadGameScene()

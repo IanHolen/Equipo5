@@ -62,7 +62,7 @@ public class GetSummary : MonoBehaviour
     public void OnMouseDown()
     {
     string user_id = PlayerPrefs.GetString("User_id");
-    string url = "http://localhost:3000/api/game_sessions?user_id=" + user_id;
+    string url = "https://BACKEND-URL-PLACEHOLDER/api/game_sessions?user_id=" + user_id;
     StartCoroutine(SendRequest(url));
 
     }

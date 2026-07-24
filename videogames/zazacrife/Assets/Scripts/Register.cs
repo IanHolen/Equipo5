@@ -21,7 +21,7 @@
          string json = JsonUtility.ToJson(user);
 
          // Here you can add your code to send the username and password to a server
-         using (UnityWebRequest www = UnityWebRequest.Put("http://localhost:3010/api/new_user", json))
+         using (UnityWebRequest www = UnityWebRequest.Put("https://BACKEND-URL-PLACEHOLDER/api/new_user", json))
          {
             
              Debug.Log("Sending request");
@@ -43,7 +43,7 @@
         user.username = username.text;
         user.password  = password.text;      
         gameObject.SetActive(true);
-        StartCoroutine(SendRequest(user, "http://localhost:3010", "/api/new_user"));
+        StartCoroutine(SendRequest(user, "https://BACKEND-URL-PLACEHOLDER", "/api/new_user"));
 
          // Here you can add your code to save the username and password to a file or database
     }
