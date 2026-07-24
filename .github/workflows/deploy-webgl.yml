@@ -1,14 +1,16 @@
 name: Build & Deploy WebGL
 
-# Compila el juego Unity a WebGL en la nube (game-ci) y lo publica en GitHub Pages.
-# Requisitos (una sola vez):
-#   Secrets del repo: UNITY_LICENSE, UNITY_EMAIL, UNITY_PASSWORD  (licencia Unity Personal gratis)
-#   Variable del repo: BACKEND_URL  (URL pública del backend en Railway, ej: https://xxxx.up.railway.app)
-# Ver la guía completa en docs/REVIVE.md
+# Compila el juego Unity a WebGL corriendo Unity DIRECTO en la imagen Docker oficial
+# (sin la action game-ci, que rompe con el formato de licencia nuevo de Unity).
+# Activa con email+password (licencia Personal), sin serial.
+# Requisitos:
+#   Secrets del repo: UNITY_EMAIL, UNITY_PASSWORD
+#   Variable del repo (opcional): BACKEND_URL (URL pública del backend). Sin ella, el juego
+#     compila igual pero login/guardado no funcionarán hasta configurarla.
 
 on:
   push:
-    branches: [main, revive-webgl]
+    branches: [main]
     paths:
       - 'videogames/**'
       - '.github/workflows/deploy-webgl.yml'
@@ -19,10 +21,13 @@ permissions:
   pages: write
   id-token: write
 
-# Evita despliegues simultáneos pisándose entre sí.
 concurrency:
   group: "pages"
   cancel-in-progress: false
+
+env:
+  UNITY_IMAGE: unityci/editor:ubuntu-2021.3.19f1-webgl-3.2.2
+  PROJECT_PATH: videogames/zazacrife
 
 jobs:
   build:
@@ -37,48 +42,58 @@ jobs:
       - name: Inyectar URL del backend
         run: |
           if [ -z "${{ vars.BACKEND_URL }}" ]; then
-            echo "::warning::La variable BACKEND_URL no está configurada. El juego compilará, pero login/guardado no funcionarán hasta configurarla en Settings > Secrets and variables > Actions > Variables."
+            echo "::warning::BACKEND_URL no está configurada. El juego compilará, pero login/guardado no funcionarán hasta ponerla en Settings > Variables."
           else
             echo "Inyectando backend: ${{ vars.BACKEND_URL }}"
-            find videogames/zazacrife/Assets/Scripts -name '*.cs' -print0 \
+            find "$PROJECT_PATH/Assets/Scripts" -name '*.cs' -print0 \
               | xargs -0 sed -i "s#https://BACKEND-URL-PLACEHOLDER#${{ vars.BACKEND_URL }}#g"
-            echo "Ocurrencias restantes del placeholder (debería ser 0):"
-            grep -rc "BACKEND-URL-PLACEHOLDER" videogames/zazacrife/Assets/Scripts || true
           fi
 
-      - name: Cache de Library (acelera builds futuros)
+      - name: Cache de Library
         uses: actions/cache@v4
         with:
-          path: videogames/zazacrife/Library
+          path: ${{ env.PROJECT_PATH }}/Library
           key: Library-webgl-${{ hashFiles('videogames/zazacrife/Assets/**', 'videogames/zazacrife/Packages/**', 'videogames/zazacrife/ProjectSettings/**') }}
           restore-keys: |
             Library-webgl-
             Library-
 
-      - name: Build (game-ci)
-        uses: game-ci/unity-builder@v4
+      - name: Compilar WebGL en Unity (Docker, activación por credenciales)
         env:
-          UNITY_LICENSE: ${{ secrets.UNITY_LICENSE }}
           UNITY_EMAIL: ${{ secrets.UNITY_EMAIL }}
           UNITY_PASSWORD: ${{ secrets.UNITY_PASSWORD }}
-        with:
-          projectPath: videogames/zazacrife
-          unityVersion: 2021.3.19f1
-          targetPlatform: WebGL
-          buildName: game
+        run: |
+          docker run --rm \
+            --env UNITY_EMAIL \
+            --env UNITY_PASSWORD \
+            --env WEBGL_OUTPUT=/project/build/WebGL \
+            --volume "$PWD:/project" \
+            --workdir /project \
+            "$UNITY_IMAGE" \
+            bash -c '
+              set -e
+              echo "== Activando y compilando (Personal, sin serial) =="
+              unity-editor \
+                -batchmode -nographics -quit \
+                -logFile /dev/stdout \
+                -username "$UNITY_EMAIL" -password "$UNITY_PASSWORD" \
+                -projectPath /project/'"$PROJECT_PATH"' \
+                -buildTarget WebGL \
+                -executeMethod Builder.PerformWebGLBuild
+            '
 
       - name: Localizar salida WebGL y arreglar permisos
         run: |
-          sudo chown -R "$(id -u):$(id -g)" build
+          sudo chown -R "$(id -u):$(id -g)" build || true
           echo "Estructura del build:"
-          find build -maxdepth 3 -type d
+          find build -maxdepth 3 -type d 2>/dev/null || true
           dir="$(dirname "$(find build -name index.html | head -1)")"
           if [ -z "$dir" ] || [ ! -f "$dir/index.html" ]; then
             echo "::error::No se encontró index.html en el build."
             exit 1
           fi
           echo "WEBGL_DIR=$dir" >> "$GITHUB_ENV"
-          echo "index.html encontrado en: $dir"
+          echo "index.html en: $dir"
 
       - name: Subir artefacto para Pages
         uses: actions/upload-pages-artifact@v3
