@@ -58,21 +58,28 @@ jobs:
             Library-webgl-
             Library-
 
-      - name: Compilar WebGL en Unity (Docker, activación por credenciales)
+      - name: Compilar WebGL en Unity (Docker, licencia entitlement + credenciales)
         env:
           UNITY_EMAIL: ${{ secrets.UNITY_EMAIL }}
           UNITY_PASSWORD: ${{ secrets.UNITY_PASSWORD }}
+          UNITY_LICENSE: ${{ secrets.UNITY_LICENSE }}
         run: |
           docker run --rm \
             --env UNITY_EMAIL \
             --env UNITY_PASSWORD \
+            --env UNITY_LICENSE \
             --env WEBGL_OUTPUT=/project/build/WebGL \
             --volume "$PWD:/project" \
             --workdir /project \
             "$UNITY_IMAGE" \
             bash -c '
               set -e
-              echo "== Activando y compilando (Personal, sin serial) =="
+              echo "== Colocando el archivo de licencia entitlement (activa el asiento) =="
+              for d in "/root/.local/share/unity3d/Unity/licenses" "/usr/share/unity3d/licenses"; do
+                mkdir -p "$d" 2>/dev/null || true
+                printf "%s" "$UNITY_LICENSE" > "$d/UnityEntitlementLicense.xml" 2>/dev/null || true
+              done
+              echo "== Activando (Personal, con archivo + credenciales, sin serial) y compilando =="
               unity-editor \
                 -batchmode -nographics -quit \
                 -logFile /dev/stdout \
