@@ -1,37 +1,166 @@
 <!DOCTYPE html>
-<html lang="en-us">
+<html lang="es">
   <head>
     <meta charset="utf-8">
     <meta http-equiv="Content-Type" content="text/html; charset=utf-8">
-    <title>Unity Web Player | zazacrife</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+    <title>The Zazacrifice of Shaggy</title>
     <link rel="shortcut icon" href="TemplateData/favicon.ico">
-    <link rel="stylesheet" href="TemplateData/style.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap" rel="stylesheet">
+    <style>
+      :root {
+        --green: #6ede57;
+        --green-glow: rgba(110, 222, 87, 0.35);
+        --blood: #b3161b;
+        --panel: #0d0b14;
+        --ink: #e9e4d6;
+      }
+      * { box-sizing: border-box; }
+      html, body {
+        margin: 0; padding: 0; min-height: 100%; width: 100%;
+        background: #060410;
+        color: var(--ink);
+        font-family: 'Press Start 2P', 'Courier New', monospace;
+        overflow-x: hidden;
+      }
+      /* Fondo tipo mazmorra: degradados oscuros + niebla sutil */
+      body {
+        background:
+          radial-gradient(circle at 50% 12%, rgba(110,222,87,0.10), transparent 42%),
+          radial-gradient(circle at 80% 85%, rgba(179,22,27,0.14), transparent 45%),
+          radial-gradient(ellipse at 50% 30%, #1b1030 0%, #0a0715 55%, #050308 100%);
+        background-attachment: fixed;
+      }
+      /* Rejilla/scanlines retro muy sutiles */
+      body::before {
+        content: ""; position: fixed; inset: 0; pointer-events: none; z-index: 0;
+        background-image: repeating-linear-gradient(0deg, rgba(0,0,0,0.18) 0px, rgba(0,0,0,0.18) 1px, transparent 2px, transparent 3px);
+        opacity: 0.35; mix-blend-mode: multiply;
+      }
+      .page {
+        position: relative; z-index: 1;
+        min-height: 100vh; min-height: 100dvh;
+        display: flex; flex-direction: column; align-items: center;
+        padding: clamp(16px, 4vw, 42px) 12px 28px;
+        gap: clamp(14px, 3vw, 28px);
+      }
+      /* --- Título --- */
+      .title { text-align: center; line-height: 1.5; }
+      .title h1 {
+        margin: 0;
+        font-size: clamp(15px, 4.6vw, 40px);
+        color: var(--green);
+        letter-spacing: 1px;
+        text-shadow:
+          3px 3px 0 var(--blood),
+          -2px -2px 0 #3a0a0c,
+          0 0 18px var(--green-glow);
+      }
+      .title .sub {
+        display: block; margin-top: 14px;
+        font-size: clamp(7px, 1.9vw, 11px);
+        color: #b9a6d6; letter-spacing: 1px;
+        text-shadow: 1px 1px 0 #000;
+      }
+      /* --- Pantalla del juego enmarcada --- */
+      #unity-container {
+        width: 100%; max-width: 1000px;
+        display: flex; flex-direction: column; align-items: center;
+      }
+      .screen-frame {
+        position: relative; width: 100%;
+        background: #000;
+        border: 4px solid #17131f;
+        border-radius: 14px;
+        padding: 10px;
+        box-shadow:
+          0 0 0 2px #2a2338 inset,
+          0 0 45px rgba(110,222,87,0.18),
+          0 22px 55px rgba(0,0,0,0.65);
+      }
+      #unity-canvas {
+        display: block; width: 100%; height: auto;
+        aspect-ratio: 960 / 600;
+        background: #050308; border-radius: 6px;
+        image-rendering: pixelated;
+      }
+      /* --- Barra de carga --- */
+      #unity-loading-bar {
+        display: none; position: absolute; inset: 0;
+        flex-direction: column; align-items: center; justify-content: center;
+        gap: 18px; background: rgba(6,4,16,0.92); border-radius: 10px;
+      }
+      .loader-text {
+        font-size: clamp(9px, 2.2vw, 12px); color: var(--green);
+        text-shadow: 0 0 10px var(--green-glow); animation: blink 1.1s steps(2) infinite;
+      }
+      @keyframes blink { 50% { opacity: 0.35; } }
+      #unity-progress-bar-empty {
+        width: min(70%, 420px); height: 20px;
+        background: #120e1c; border: 2px solid #2c2440; border-radius: 3px; overflow: hidden;
+        box-shadow: inset 0 0 8px #000;
+      }
+      #unity-progress-bar-full {
+        width: 0%; height: 100%;
+        background: linear-gradient(90deg, #3aa62f, var(--green));
+        box-shadow: 0 0 12px var(--green-glow); transition: width .2s;
+      }
+      #unity-warning { position: absolute; left: 50%; top: 12px; transform: translateX(-50%); z-index: 5; }
+      #unity-warning > div { color: #000; border-radius: 4px; margin: 4px; }
+      /* --- Footer --- */
+      #unity-footer {
+        margin-top: 16px; width: 100%; max-width: 1000px;
+        display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 12px;
+        font-size: clamp(7px, 1.7vw, 10px); color: #8c7fae;
+      }
+      #unity-fullscreen-button {
+        font-family: inherit; font-size: inherit; cursor: pointer;
+        color: var(--green); background: #120e1c;
+        border: 2px solid #2c2440; border-radius: 6px; padding: 10px 14px;
+        text-shadow: 0 0 8px var(--green-glow); transition: all .15s;
+      }
+      #unity-fullscreen-button:hover {
+        border-color: var(--green); box-shadow: 0 0 14px var(--green-glow); transform: translateY(-1px);
+      }
+      #unity-footer .credit { text-shadow: 1px 1px 0 #000; }
+      #unity-footer .credit b { color: var(--blood); }
+      /* Móvil: aprovechar toda la pantalla */
+      @media (max-width: 560px) {
+        .title h1 { text-shadow: 2px 2px 0 var(--blood), 0 0 12px var(--green-glow); }
+        .screen-frame { padding: 6px; border-width: 3px; }
+      }
+    </style>
   </head>
   <body>
-    <div id="unity-container" class="unity-desktop">
-      <canvas id="unity-canvas" width=960 height=600 tabindex="-1"></canvas>
-      <div id="unity-loading-bar">
-        <div id="unity-logo"></div>
-        <div id="unity-progress-bar-empty">
-          <div id="unity-progress-bar-full"></div>
+    <div class="page">
+      <header class="title">
+        <h1>The Zazacrifice<br>of Shaggy</h1>
+        <span class="sub">◆ Un RPG de fantasía, batallas y magia ◆</span>
+      </header>
+
+      <div id="unity-container">
+        <div class="screen-frame">
+          <canvas id="unity-canvas" width="960" height="600" tabindex="-1"></canvas>
+          <div id="unity-loading-bar">
+            <div class="loader-text">CARGANDO EL MUNDO...</div>
+            <div id="unity-progress-bar-empty">
+              <div id="unity-progress-bar-full"></div>
+            </div>
+          </div>
+          <div id="unity-warning"> </div>
+        </div>
+        <div id="unity-footer">
+          <button id="unity-fullscreen-button" type="button">⛶ Pantalla completa</button>
+          <span class="credit">Un juego de <b>Equipo 5</b> · Zaza Inc.</span>
         </div>
       </div>
-      <div id="unity-warning"> </div>
-      <div id="unity-footer">
-        <div id="unity-logo-title-footer"></div>
-        <div id="unity-fullscreen-button"></div>
-        <div id="unity-build-title">zazacrife</div>
-      </div>
     </div>
+
     <script>
       var canvas = document.querySelector("#unity-canvas");
 
-      // Shows a temporary message banner/ribbon for a few seconds, or
-      // a permanent error message on top of the canvas if type=='error'.
-      // If type=='warning', a yellow highlight color is used.
-      // Modify or remove this function to customize the visually presented
-      // way that non-critical warnings and error messages are presented to the
-      // user.
       function unityShowBanner(msg, type) {
         var warningBanner = document.querySelector("#unity-warning");
         function updateBannerVisibility() {
@@ -63,71 +192,33 @@
         productName: "zazacrife",
         productVersion: "1.0",
         showBanner: unityShowBanner,
-        // errorHandler: function(err, url, line) {
-        //    alert("error " + err + " occurred at line " + line);
-        //    // Return 'true' if you handled this error and don't want Unity
-        //    // to process it further, 'false' otherwise.
-        //    return true;
-        // },
       };
 
-      // By default, Unity keeps WebGL canvas render target size matched with
-      // the DOM size of the canvas element (scaled by window.devicePixelRatio)
-      // Set this to false if you want to decouple this synchronization from
-      // happening inside the engine, and you would instead like to size up
-      // the canvas DOM size and WebGL render target sizes yourself.
-      // config.matchWebGLToCanvasSize = false;
-
-      // If you would like all file writes inside Unity Application.persistentDataPath
-      // directory to automatically persist so that the contents are remembered when
-      // the user revisits the site the next time, uncomment the following line:
-      // config.autoSyncPersistentDataPath = true;
-      // This autosyncing is currently not the default behavior to avoid regressing
-      // existing user projects that might rely on the earlier manual
-      // JS_FileSystem_Sync() behavior, but in future Unity version, this will be
-      // expected to change.
-
       if (/iPhone|iPad|iPod|Android/i.test(navigator.userAgent)) {
-        // Mobile device style: fill the whole browser client area with the game canvas:
-
         var meta = document.createElement('meta');
         meta.name = 'viewport';
         meta.content = 'width=device-width, height=device-height, initial-scale=1.0, user-scalable=no, shrink-to-fit=yes';
         document.getElementsByTagName('head')[0].appendChild(meta);
-        document.querySelector("#unity-container").className = "unity-mobile";
-        canvas.className = "unity-mobile";
-
-        // To lower canvas resolution on mobile devices to gain some
-        // performance, uncomment the following line:
-        // config.devicePixelRatio = 1;
-
-
-      } else {
-        // Desktop style: Render the game canvas in a window that can be maximized to fullscreen:
-        canvas.style.width = "960px";
-        canvas.style.height = "600px";
       }
+      // El tamaño del canvas lo controla el CSS (responsivo), no estilos inline.
 
-      document.querySelector("#unity-loading-bar").style.display = "block";
+      document.querySelector("#unity-loading-bar").style.display = "flex";
 
       var script = document.createElement("script");
       script.src = loaderUrl;
       script.onload = () => {
         createUnityInstance(canvas, config, (progress) => {
           document.querySelector("#unity-progress-bar-full").style.width = 100 * progress + "%";
-              }).then((unityInstance) => {
-                document.querySelector("#unity-loading-bar").style.display = "none";
-                document.querySelector("#unity-fullscreen-button").onclick = () => {
-                  unityInstance.SetFullscreen(1);
-                };
-
-              }).catch((message) => {
-                alert(message);
-              });
-            };
-
+        }).then((unityInstance) => {
+          document.querySelector("#unity-loading-bar").style.display = "none";
+          document.querySelector("#unity-fullscreen-button").onclick = () => {
+            unityInstance.SetFullscreen(1);
+          };
+        }).catch((message) => {
+          alert(message);
+        });
+      };
       document.body.appendChild(script);
-
     </script>
   </body>
 </html>
