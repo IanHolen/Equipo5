@@ -1,0 +1,23 @@
+name: Keep-alive (DB + backend)
+
+# Mantiene despiertos el backend (Render) y la base de datos (Aiven free, que se apaga
+# por inactividad). Hace ping cada 10 min a /api/users, que ejecuta una query real en MySQL.
+
+on:
+  schedule:
+    - cron: '*/10 * * * *'   # cada 10 minutos
+  workflow_dispatch:
+
+jobs:
+  ping:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Ping backend (toca la DB para mantener Aiven despierto)
+        run: |
+          for i in 1 2 3 4; do
+            code=$(curl -s -o /dev/null -w "%{http_code}" -m 70 "https://equipo5-nfye.onrender.com/api/users" || echo "000")
+            echo "intento $i -> HTTP $code"
+            [ "$code" = "200" ] && { echo "OK, DB viva"; exit 0; }
+            sleep 25
+          done
+          echo "::warning::La DB/backend no respondió 200. Si Aiven está apagado, enciéndelo manualmente una vez."
